@@ -44,7 +44,25 @@ namespace Antmicro.Renode.Connectors
             var endpoints = connectorPin.Endpoints;
             for(var i = 0; i < endpoints.Count; i++)
             {
-                endpoints[i].Receiver.GetMachine().HandleTimeDomainEvent(connectorPin.Set, value, TimeDomainsManager.Instance.VirtualTimeStamp);
+                this.Log(LogLevel.Noisy, string.Format("OnGPIO  number: {0} value: {1}, i: {2}", number, value, i));
+                if(!endpoints[i].Receiver.TryGetMachine(out var machine))
+                {
+                    this.Log(LogLevel.Noisy, "TryGetMachine Failed");
+                    // can happen during button creation
+                    connectorPin.Set(value);
+                    return;
+                }
+                if(!TimeDomainsManager.Instance.TryGetVirtualTimeStamp(out var vts))
+                {
+                    this.Log(LogLevel.Noisy, "TryGetVirtualTimeStamp Failed");
+                    // this is almost always the case, but maybe someday we'll be able to press the
+                    // button by a machine-controlled actuator
+                    vts = new TimeStamp(default(TimeInterval), EmulationManager.ExternalWorld);
+                }
+
+                machine.HandleTimeDomainEvent(connectorPin.Set, value, vts);
+
+                //endpoints[i].Receiver.GetMachine().HandleTimeDomainEvent(connectorPin.Set, value, TimeDomainsManager.Instance.VirtualTimeStamp);
             }
         }
 
